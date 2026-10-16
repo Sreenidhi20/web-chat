@@ -2,9 +2,10 @@ import { IconButton, Paper, TextField } from "@mui/material";
 
 interface MessageInputProps {
   disabled: boolean;
+  placeholder: string;
 }
 
-function MessageInput({ disabled }: MessageInputProps) {
+function MessageInput({ disabled, placeholder }: MessageInputProps) {
   return (
     <Paper
       component="div"
@@ -24,7 +25,7 @@ function MessageInput({ disabled }: MessageInputProps) {
       <TextField
         fullWidth
         disabled={disabled}
-        placeholder="Sign in to send a message"
+        placeholder={placeholder}
         slotProps={{ htmlInput: { "aria-label": "Message" } }}
         variant="standard"
       />

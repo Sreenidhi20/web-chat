@@ -7,12 +7,16 @@ interface ChatWindowProps {
   conversation: Conversation | null;
   messages: ChatMessage[];
   currentUserId: number | null;
+  isLoading: boolean;
+  error: string | null;
 }
 
 function ChatWindow({
   conversation,
   messages,
   currentUserId,
+  isLoading,
+  error,
 }: ChatWindowProps) {
   return (
     <Paper
@@ -55,7 +59,15 @@ function ChatWindow({
         spacing={1.5}
         sx={{ flexGrow: 1, overflowY: "auto", p: { xs: 2, sm: 3 } }}
       >
-        {conversation && currentUserId !== null && messages.length > 0 ? (
+        {error ? (
+          <Box role="alert" sx={{ m: "auto", textAlign: "center", px: 2 }}>
+            <Typography color="error.main">{error}</Typography>
+          </Box>
+        ) : isLoading ? (
+          <Box role="status" sx={{ m: "auto" }}>
+            <Typography color="text.secondary">Loading messages…</Typography>
+          </Box>
+        ) : conversation && currentUserId !== null && messages.length > 0 ? (
           messages.map((message) => (
             <MessageBubble
               key={message.id}
@@ -82,7 +94,14 @@ function ChatWindow({
         )}
       </Stack>
       <Box sx={{ p: { xs: 1.5, sm: 2 }, pt: 0 }}>
-        <MessageInput disabled={!conversation || currentUserId === null} />
+        <MessageInput
+          disabled
+          placeholder={
+            conversation
+              ? "Message sending will be enabled soon"
+              : "Select a contact to start chatting"
+          }
+        />
       </Box>
     </Paper>
   );
