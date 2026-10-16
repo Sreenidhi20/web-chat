@@ -29,4 +29,4 @@ This log records the completed frontend milestones on `develop`. The integration
 
 ## Documentation checkpoint
 
-This documentation set is being committed as the Phase 8 checkpoint. Its commit hash will be recorded here in the follow-up implementation-log update.
+The Phase 8 documentation set was committed as `6719eaf` (`docs: document frontend architecture and decisions`). This line was added in a follow-up commit so the checkpoint hash is recorded in the log.
