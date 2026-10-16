@@ -1,6 +1,15 @@
-import { Box, Container, Paper, Stack, Typography } from "@mui/material";
+import { useState } from "react";
+import { Box, Container, Stack, Typography } from "@mui/material";
+import ChatWindow from "../components/ChatWindow.tsx";
+import Sidebar from "../components/Sidebar.tsx";
+import type { ChatMessage, Conversation } from "../types/chat.ts";
 
 function ChatPage() {
+  const [selectedConversation, setSelectedConversation] =
+    useState<Conversation | null>(null);
+  const conversations: Conversation[] = [];
+  const messages: ChatMessage[] = [];
+
   return (
     <Box
       sx={{
@@ -51,38 +60,30 @@ function ChatPage() {
         maxWidth="xl"
         sx={{ flexGrow: 1, display: "flex", py: { xs: 2, sm: 3, md: 5 } }}
       >
-        <Paper
-          component="section"
-          aria-labelledby="workspace-title"
-          elevation={0}
+        <Box
           sx={{
-            flexGrow: 1,
-            minHeight: { xs: "65vh", md: "min(700px, calc(100vh - 170px))" },
             display: "grid",
-            placeItems: "center",
-            p: { xs: 3, sm: 6 },
+            gridTemplateColumns: { xs: "1fr", md: "300px minmax(0, 1fr)" },
+            flexGrow: 1,
+            minHeight: { xs: "70vh", md: "min(700px, calc(100vh - 170px))" },
+            overflow: "hidden",
+            bgcolor: "background.paper",
             border: 1,
             borderColor: "divider",
+            borderRadius: 2,
           }}
         >
-          <Stack
-            spacing={1.5}
-            sx={{ alignItems: "center", textAlign: "center", maxWidth: 480 }}
-          >
-            <Typography
-              id="workspace-title"
-              component="h1"
-              variant="h4"
-              sx={{ fontWeight: 700 }}
-            >
-              Your chat workspace
-            </Typography>
-            <Typography color="text.secondary">
-              Sign-in, conversations, and messaging will be connected in the
-              next implementation milestones.
-            </Typography>
-          </Stack>
-        </Paper>
+          <Sidebar
+            conversations={conversations}
+            selectedConversationId={selectedConversation?.id ?? null}
+            onSelectConversation={setSelectedConversation}
+          />
+          <ChatWindow
+            conversation={selectedConversation}
+            messages={messages}
+            currentUserId={null}
+          />
+        </Box>
       </Container>
     </Box>
   );
