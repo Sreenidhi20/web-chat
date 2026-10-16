@@ -48,7 +48,8 @@ export function parseChatSocketFrame(data: string): ChatSocketEvent {
     typeof value.from !== "number" ||
     value.from <= 0 ||
     typeof value.message !== "string" ||
-    typeof value.sent_at !== "string"
+    typeof value.sent_at !== "string" ||
+    !Number.isFinite(Date.parse(value.sent_at))
   ) {
     throw new Error("The chat server sent an invalid message.");
   }
@@ -72,11 +73,15 @@ export function useChatSocket(
   const [connectionAttempt, setConnectionAttempt] = useState(0);
 
   useEffect(() => {
+    let active = true;
     let socket: WebSocket;
     try {
       socket = new WebSocket(buildWebSocketUrl(accessToken));
     } catch (cause) {
       queueMicrotask(() => {
+        if (!active) {
+          return;
+        }
         setStatus("disconnected");
         setError(
           cause instanceof ApiConfigurationError
@@ -90,11 +95,17 @@ export function useChatSocket(
     socketRef.current = socket;
 
     socket.addEventListener("open", () => {
+      if (!active) {
+        return;
+      }
       setStatus("connected");
       setError(null);
     });
 
     socket.addEventListener("message", (event: MessageEvent<string>) => {
+      if (!active) {
+        return;
+      }
       try {
         onEvent(parseChatSocketFrame(event.data));
       } catch (cause) {
@@ -107,19 +118,23 @@ export function useChatSocket(
     });
 
     socket.addEventListener("error", () => {
+      if (!active) {
+        return;
+      }
       setError(
         "The real-time connection failed. You may need to sign in again.",
       );
     });
 
     socket.addEventListener("close", () => {
-      if (socketRef.current === socket) {
+      if (active && socketRef.current === socket) {
         socketRef.current = null;
         setStatus("disconnected");
       }
     });
 
     return () => {
+      active = false;
       socketRef.current = null;
       socket.close();
     };

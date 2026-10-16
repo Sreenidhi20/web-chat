@@ -20,7 +20,6 @@ interface ChatWindowProps {
   socketStatus: "connecting" | "connected" | "disconnected";
   socketError: string | null;
   sendError: string | null;
-  deliveryInfo: string | null;
   onReconnect: () => void;
   onRefreshHistory: () => void;
   draft: string;
@@ -37,7 +36,6 @@ function ChatWindow({
   socketStatus,
   socketError,
   sendError,
-  deliveryInfo,
   onReconnect,
   onRefreshHistory,
   draft,
@@ -117,11 +115,6 @@ function ChatWindow({
       {sendError && (
         <Alert severity="error" role="alert" sx={{ borderRadius: 0 }}>
           {sendError}
-        </Alert>
-      )}
-      {deliveryInfo && (
-        <Alert severity="info" role="status" sx={{ borderRadius: 0 }}>
-          {deliveryInfo}
         </Alert>
       )}
       <Stack

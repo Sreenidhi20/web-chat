@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Box, Container } from "@mui/material";
+import { Alert, Box, Container } from "@mui/material";
 import AppHeader from "../components/AppHeader.tsx";
 import ChatWindow from "../components/ChatWindow.tsx";
 import Sidebar from "../components/Sidebar.tsx";
@@ -149,6 +149,9 @@ function AuthenticatedChatPage({
         const response = await listUsers(accessToken, {
           signal: controller.signal,
         });
+        if (controller.signal.aborted) {
+          return;
+        }
         setUsers(response);
       } catch (cause) {
         if (controller.signal.aborted) {
@@ -188,6 +191,9 @@ function AuthenticatedChatPage({
           otherUserId,
           { signal: controller.signal },
         );
+        if (controller.signal.aborted) {
+          return;
+        }
         setHistory((current) => {
           const existing =
             current?.conversationId === otherUserId ? current.messages : [];
@@ -282,8 +288,19 @@ function AuthenticatedChatPage({
       <Container
         component="main"
         maxWidth="xl"
-        sx={{ flexGrow: 1, display: "flex", py: { xs: 2, sm: 3, md: 5 } }}
+        sx={{
+          flexGrow: 1,
+          display: "flex",
+          flexDirection: "column",
+          gap: 1.5,
+          py: { xs: 2, sm: 3, md: 5 },
+        }}
       >
+        {deliveryInfo && (
+          <Alert severity="info" role="status">
+            {deliveryInfo}
+          </Alert>
+        )}
         <Box
           sx={{
             display: "grid",
@@ -323,7 +340,6 @@ function AuthenticatedChatPage({
             socketStatus={socketStatus}
             socketError={socketError}
             sendError={sendError}
-            deliveryInfo={deliveryInfo}
             onReconnect={reconnectSocket}
             onRefreshHistory={refreshHistory}
             draft={draft}

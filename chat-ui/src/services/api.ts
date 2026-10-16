@@ -134,12 +134,13 @@ function errorMessage(detail: ApiErrorDetail, status: number): string {
   }
 
   if (Array.isArray(detail)) {
-    return detail
+    const message = detail
       .map(({ loc, msg }) => {
         const field = loc.filter((part) => part !== "body").join(".");
         return field ? `${field}: ${msg}` : msg;
       })
       .join("; ");
+    return message || `The chat service returned an error (${status}).`;
   }
 
   return `The chat service returned an error (${status}).`;
@@ -191,7 +192,8 @@ function parseMessages(value: unknown): ChatMessage[] {
       !isPositiveInteger(item.sender_id) ||
       !isPositiveInteger(item.receiver_id) ||
       typeof item.content !== "string" ||
-      typeof item.sent_at !== "string"
+      typeof item.sent_at !== "string" ||
+      !Number.isFinite(Date.parse(item.sent_at))
     ) {
       throw new ApiContractError(
         "The chat service returned an invalid message.",
@@ -241,13 +243,16 @@ async function request<T>(
   if (options.token !== undefined) {
     headers.set("Authorization", `Bearer ${validateToken(options.token)}`);
   }
+  const url = buildUrl(path);
+  const body =
+    options.body === undefined ? undefined : JSON.stringify(options.body);
 
   let response: Response;
   try {
-    response = await fetch(buildUrl(path), {
+    response = await fetch(url, {
       method: options.method ?? "GET",
       headers,
-      body: options.body === undefined ? undefined : JSON.stringify(options.body),
+      body,
       signal: options.signal,
     });
   } catch (cause) {
