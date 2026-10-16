@@ -1,13 +1,21 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Box, Container } from "@mui/material";
 import AppHeader from "../components/AppHeader.tsx";
 import ChatWindow from "../components/ChatWindow.tsx";
 import Sidebar from "../components/Sidebar.tsx";
 import { useAuth } from "../context/useAuth.ts";
+import { useChatSocket } from "../hooks/useChatSocket.ts";
 import { usePresence } from "../hooks/usePresence.ts";
 import { ApiError, getMessageHistory, listUsers } from "../services/api.ts";
 import type { ApiUser } from "../types/api.ts";
-import type { ChatMessage, Conversation } from "../types/chat.ts";
+import type {
+  ChatMessage,
+  ChatSocketEvent,
+  Conversation,
+  DisplayMessage,
+} from "../types/chat.ts";
+
+const OPTIMISTIC_HISTORY_MATCH_WINDOW_MS = 5 * 60_000;
 
 function ChatPage() {
   const { session, logout } = useAuth();
@@ -46,10 +54,20 @@ function AuthenticatedChatPage({
   const [usersError, setUsersError] = useState<string | null>(null);
   const [history, setHistory] = useState<{
     conversationId: number;
-    messages: ChatMessage[];
+    messages: DisplayMessage[];
     error: string | null;
   } | null>(null);
   const [retryUsers, setRetryUsers] = useState(0);
+  const [historyRevision, setHistoryRevision] = useState(0);
+  const [draft, setDraft] = useState("");
+  const [sendError, setSendError] = useState<string | null>(null);
+  const [deliveryInfo, setDeliveryInfo] = useState<string | null>(null);
+  const nextOptimisticIdRef = useRef(-1);
+  const selectedConversationIdRef = useRef<number | null>(null);
+  useEffect(() => {
+    selectedConversationIdRef.current = selectedConversationId;
+  }, [selectedConversationId]);
+
   const handleUnauthorized = useCallback(
     (cause: unknown) => {
       if (cause instanceof ApiError && cause.status === 401) {
@@ -60,6 +78,49 @@ function AuthenticatedChatPage({
     },
     [onLogout],
   );
+  const handleSocketEvent = useCallback(
+    (event: ChatSocketEvent) => {
+      if (event.type === "info") {
+        setDeliveryInfo(event.info.info);
+        setHistoryRevision((revision) => revision + 1);
+        return;
+      }
+
+      const incoming = event.message;
+      const conversationId = incoming.from;
+      if (selectedConversationIdRef.current === conversationId) {
+        const message: ChatMessage = {
+          id: incoming.id,
+          sender_id: incoming.from,
+          receiver_id: userId,
+          content: incoming.message,
+          sent_at: incoming.sent_at,
+        };
+        setHistory((current) => {
+          const messages =
+            current?.conversationId === conversationId
+              ? current.messages
+              : [];
+          if (messages.some((item) => item.id === message.id)) {
+            return current;
+          }
+          return {
+            conversationId,
+            messages: [...messages, message],
+            error: null,
+          };
+        });
+        setHistoryRevision((revision) => revision + 1);
+      }
+    },
+    [userId],
+  );
+  const {
+    status: socketStatus,
+    error: socketError,
+    connect: reconnectSocket,
+    send: sendSocketMessage,
+  } = useChatSocket(accessToken, handleSocketEvent);
   const { onlineUserIds, error: presenceError } = usePresence(
     accessToken,
     onLogout,
@@ -121,16 +182,20 @@ function AuthenticatedChatPage({
 
     async function loadMessages() {
       try {
-        const history = await getMessageHistory(
+        const conversationHistory = await getMessageHistory(
           accessToken,
           userId,
           otherUserId,
           { signal: controller.signal },
         );
-        setHistory({
-          conversationId: otherUserId,
-          messages: history,
-          error: null,
+        setHistory((current) => {
+          const existing =
+            current?.conversationId === otherUserId ? current.messages : [];
+          return {
+            conversationId: otherUserId,
+            messages: reconcileHistory(conversationHistory, existing),
+            error: null,
+          };
         });
       } catch (cause) {
         if (controller.signal.aborted) {
@@ -151,7 +216,57 @@ function AuthenticatedChatPage({
 
     void loadMessages();
     return () => controller.abort();
-  }, [accessToken, userId, selectedConversationId, handleUnauthorized]);
+  }, [
+    accessToken,
+    userId,
+    selectedConversationId,
+    historyRevision,
+    handleUnauthorized,
+  ]);
+
+  const handleSend = useCallback(() => {
+    const content = draft.trim();
+    if (!content || selectedConversationId === null) {
+      return;
+    }
+
+    try {
+      sendSocketMessage(selectedConversationId, content);
+      const optimisticMessage: DisplayMessage = {
+        id: nextOptimisticIdRef.current,
+        sender_id: userId,
+        receiver_id: selectedConversationId,
+        content,
+        sent_at: new Date().toISOString(),
+        isPendingDelivery: true,
+      };
+      nextOptimisticIdRef.current -= 1;
+      setHistory((current) => {
+        const messages =
+          current?.conversationId === selectedConversationId
+            ? current.messages
+            : [];
+        return {
+          conversationId: selectedConversationId,
+          messages: [...messages, optimisticMessage],
+          error: null,
+        };
+      });
+      setDraft("");
+      setSendError(null);
+      setDeliveryInfo(null);
+    } catch (cause) {
+      setSendError(
+        cause instanceof Error
+          ? cause.message
+          : "Unable to send the message. Your draft has been kept.",
+      );
+    }
+  }, [draft, selectedConversationId, sendSocketMessage, userId]);
+
+  const refreshHistory = useCallback(() => {
+    setHistoryRevision((revision) => revision + 1);
+  }, []);
 
   return (
     <Box
@@ -205,11 +320,71 @@ function AuthenticatedChatPage({
               selectedConversationId !== null && currentHistory === null
             }
             error={currentHistory?.error ?? null}
+            socketStatus={socketStatus}
+            socketError={socketError}
+            sendError={sendError}
+            deliveryInfo={deliveryInfo}
+            onReconnect={reconnectSocket}
+            onRefreshHistory={refreshHistory}
+            draft={draft}
+            onDraftChange={setDraft}
+            onSend={handleSend}
           />
         </Box>
       </Container>
     </Box>
   );
+}
+
+function reconcileHistory(
+  serverMessages: ChatMessage[],
+  existingMessages: DisplayMessage[],
+): DisplayMessage[] {
+  const reconciled: DisplayMessage[] = [...serverMessages];
+  const serverIds = new Set(serverMessages.map((message) => message.id));
+  const usedServerIds = new Set<number>();
+  const unresolvedOptimistic: DisplayMessage[] = [];
+
+  for (const pending of existingMessages.filter(
+    (message) => message.isPendingDelivery,
+  )) {
+    const pendingTime = Date.parse(pending.sent_at);
+    const match = serverMessages
+      .filter(
+        (message) =>
+          !usedServerIds.has(message.id) &&
+          message.sender_id === pending.sender_id &&
+          message.receiver_id === pending.receiver_id &&
+          message.content === pending.content &&
+          Number.isFinite(pendingTime) &&
+          Number.isFinite(Date.parse(message.sent_at)) &&
+          Math.abs(Date.parse(message.sent_at) - pendingTime) <=
+            OPTIMISTIC_HISTORY_MATCH_WINDOW_MS,
+      )
+      .sort(
+        (first, second) =>
+          Math.abs(Date.parse(first.sent_at) - pendingTime) -
+          Math.abs(Date.parse(second.sent_at) - pendingTime),
+      )[0];
+
+    if (match) {
+      usedServerIds.add(match.id);
+    } else {
+      unresolvedOptimistic.push(pending);
+    }
+  }
+
+  const knownServerIds = new Set(serverIds);
+  for (const localMessage of existingMessages) {
+    if (
+      !localMessage.isPendingDelivery &&
+      !knownServerIds.has(localMessage.id)
+    ) {
+      reconciled.push(localMessage);
+    }
+  }
+
+  return [...reconciled, ...unresolvedOptimistic];
 }
 
 export default ChatPage;

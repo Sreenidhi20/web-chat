@@ -1,17 +1,36 @@
 import { IconButton, Paper, TextField } from "@mui/material";
+import type { FormEvent } from "react";
 
 interface MessageInputProps {
   disabled: boolean;
+  canSend: boolean;
   placeholder: string;
+  value: string;
+  onChange: (value: string) => void;
+  onSend: () => void;
 }
 
-function MessageInput({ disabled, placeholder }: MessageInputProps) {
+function MessageInput({
+  disabled,
+  canSend,
+  placeholder,
+  value,
+  onChange,
+  onSend,
+}: MessageInputProps) {
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (canSend) {
+      onSend();
+    }
+  }
+
   return (
     <Paper
-      component="div"
-      role="group"
+      component="form"
       aria-label="Message composer"
       elevation={0}
+      onSubmit={handleSubmit}
       sx={{
         display: "flex",
         alignItems: "center",
@@ -26,6 +45,8 @@ function MessageInput({ disabled, placeholder }: MessageInputProps) {
         fullWidth
         disabled={disabled}
         placeholder={placeholder}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
         slotProps={{ htmlInput: { "aria-label": "Message" } }}
         variant="standard"
       />
@@ -33,7 +54,7 @@ function MessageInput({ disabled, placeholder }: MessageInputProps) {
         type="submit"
         color="primary"
         aria-label="Send message"
-        disabled={disabled}
+        disabled={!canSend || value.trim().length === 0}
       >
         <svg
           aria-hidden="true"

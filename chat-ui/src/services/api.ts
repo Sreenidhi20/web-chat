@@ -75,6 +75,14 @@ function buildUrl(path: string): string {
   return `${getBaseUrl()}/${path}`;
 }
 
+export function buildWebSocketUrl(accessToken: string): string {
+  const token = validateToken(accessToken);
+  const url = new URL(`${getBaseUrl()}/ws`);
+  url.protocol = url.protocol === "https:" ? "wss:" : "ws:";
+  url.searchParams.set("token", token);
+  return url.toString();
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }

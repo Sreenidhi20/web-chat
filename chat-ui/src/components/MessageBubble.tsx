@@ -1,8 +1,8 @@
 import { Box, Paper, Typography } from "@mui/material";
-import type { ChatMessage } from "../types/chat.ts";
+import type { DisplayMessage } from "../types/chat.ts";
 
 interface MessageBubbleProps {
-  message: ChatMessage;
+  message: DisplayMessage;
   currentUserId: number;
 }
 
@@ -47,6 +47,15 @@ function MessageBubble({ message, currentUserId }: MessageBubbleProps) {
             minute: "2-digit",
           })}
         </Typography>
+        {message.isPendingDelivery && (
+          <Typography
+            component="span"
+            variant="caption"
+            sx={{ display: "block", textAlign: "right", opacity: 0.8 }}
+          >
+            Sent · awaiting history sync
+          </Typography>
+        )}
       </Paper>
     </Box>
   );
