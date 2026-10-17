@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Alert, Box } from "@mui/material";
-import AppHeader from "../components/AppHeader.tsx";
 import ChatWindow from "../components/ChatWindow.tsx";
 import Sidebar from "../components/Sidebar.tsx";
 import { useAuth } from "../context/useAuth.ts";
@@ -312,7 +311,6 @@ function AuthenticatedChatPage({
           },
         }}
       >
-        <AppHeader username={username} onLogout={onLogout} />
         {deliveryInfo && (
           <Alert severity="info" role="status">
             {deliveryInfo}
@@ -334,6 +332,8 @@ function AuthenticatedChatPage({
           }}
         >
           <Sidebar
+            username={username}
+            onLogout={onLogout}
             conversations={conversations}
             selectedConversationId={selectedConversationId}
             onSelectConversation={(conversation) =>

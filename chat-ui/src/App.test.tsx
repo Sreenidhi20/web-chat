@@ -287,7 +287,8 @@ describe("chat application", () => {
     ).toEqual([{ to: 2, message: "hello Bob" }]);
     expect(composer).toHaveValue("keep as draft");
 
-    await user.click(screen.getByRole("button", { name: "Sign out" }));
+    await user.click(screen.getByRole("button", { name: "More options" }));
+    await user.click(screen.getByRole("menuitem", { name: /Sign out/ }));
     expect(
       await screen.findByRole("heading", { name: "Welcome back" }),
     ).toBeInTheDocument();
