@@ -1,5 +1,4 @@
 import { StrictMode } from "react";
-import { CssBaseline, ThemeProvider } from "@mui/material";
 import {
   act,
   render,
@@ -11,7 +10,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import App from "./App.tsx";
 import { AuthProvider } from "./context/AuthContext.tsx";
-import { appTheme } from "./theme.ts";
+import { ColorModeProvider } from "./context/ColorModeContext.tsx";
 import type { ChatMessage } from "./types/chat.ts";
 
 interface OutgoingSocketMessage {
@@ -62,12 +61,11 @@ class TestWebSocket extends EventTarget {
 function renderApp() {
   return render(
     <StrictMode>
-      <ThemeProvider theme={appTheme}>
-        <CssBaseline />
+      <ColorModeProvider>
         <AuthProvider>
           <App />
         </AuthProvider>
-      </ThemeProvider>
+      </ColorModeProvider>
     </StrictMode>,
   );
 }
@@ -79,6 +77,7 @@ describe("chat application", () => {
   beforeEach(() => {
     serverHistory = [];
     requests = [];
+    window.localStorage.clear();
     TestWebSocket.instances = [];
     vi.stubGlobal("WebSocket", TestWebSocket);
     vi.stubGlobal(
@@ -155,6 +154,13 @@ describe("chat application", () => {
       screen.getByLabelText(/Password/),
       "wrong-password",
     );
+    await user.click(screen.getByRole("button", { name: "Show password" }));
+    expect(screen.getByLabelText(/Password/)).toHaveAttribute("type", "text");
+    await user.click(screen.getByRole("button", { name: "Hide password" }));
+    expect(screen.getByLabelText(/Password/)).toHaveAttribute(
+      "type",
+      "password",
+    );
     await user.click(screen.getByRole("button", { name: "Sign in" }));
     expect(await screen.findByRole("alert")).toHaveTextContent(
       "Invalid username or password",
@@ -212,8 +218,8 @@ describe("chat application", () => {
       await screen.findByText("No messages in this conversation yet."),
     ).toBeInTheDocument();
     expect(
-      await screen.findByText("Real-time connection is active."),
-    ).toBeInTheDocument();
+      screen.queryByText("Real-time connection is active."),
+    ).not.toBeInTheDocument();
 
     const socket = TestWebSocket.instances.at(-1);
     expect(socket).toBeDefined();
@@ -222,12 +228,18 @@ describe("chat application", () => {
     );
 
     const composer = screen.getByRole("textbox", { name: "Message" });
+    await user.type(composer, "draft line");
+    await user.keyboard("{Shift>}{Enter}{/Shift}");
+    expect(composer).toHaveValue("draft line\n");
+    await user.clear(composer);
     await user.type(composer, "hello Bob");
     await user.keyboard("{Enter}");
 
     expect(await screen.findByText("hello Bob")).toBeInTheDocument();
     expect(socket!.sentMessages).toEqual([{ to: 2, message: "hello Bob" }]);
-    expect(await screen.findByText(/awaiting history sync/)).toBeInTheDocument();
+    expect(
+      await screen.findByRole("img", { name: /awaiting history sync/ }),
+    ).toBeInTheDocument();
 
     const optimisticTimestamp = container
       .querySelector("time")
@@ -252,7 +264,9 @@ describe("chat application", () => {
       await screen.findByRole("status"),
     ).toHaveTextContent("The message is saved, but was not delivered live.");
     await waitFor(() => {
-      expect(screen.queryByText(/awaiting history sync/)).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole("img", { name: /awaiting history sync/ }),
+      ).not.toBeInTheDocument();
     });
     expect(screen.getAllByText("hello Bob")).toHaveLength(1);
 
@@ -281,15 +295,17 @@ describe("chat application", () => {
     expect(screen.getByRole("button", { name: "Send message" })).toBeDisabled();
     expect(socket!.sentMessages).toHaveLength(1);
     await user.click(screen.getByRole("button", { name: "Reconnect" }));
-    expect(
-      await screen.findByText("Real-time connection is active."),
-    ).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "Send message" })).toBeEnabled();
+    });
+    expect(screen.queryByText("Real-time connection is active.")).not.toBeInTheDocument();
     expect(
       TestWebSocket.instances.flatMap((instance) => instance.sentMessages),
     ).toEqual([{ to: 2, message: "hello Bob" }]);
     expect(composer).toHaveValue("keep as draft");
 
-    await user.click(screen.getByRole("button", { name: "Sign out" }));
+    await user.click(screen.getByRole("button", { name: "More options" }));
+    await user.click(screen.getByRole("menuitem", { name: /Sign out/ }));
     expect(
       await screen.findByRole("heading", { name: "Welcome back" }),
     ).toBeInTheDocument();
@@ -327,6 +343,23 @@ describe("chat application", () => {
       "correct-password",
     );
     await user.click(screen.getByRole("button", { name: "Sign in" }));
+    const search = await screen.findByRole("textbox", {
+      name: "Search contacts",
+    });
+    await user.type(search, "not-a-contact");
+    expect(
+      await screen.findByText("No contacts match your search."),
+    ).toBeInTheDocument();
+    await user.clear(search);
+    expect(
+      await screen.findByRole("button", { name: /bob Online/ }),
+    ).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Switch to dark mode" }));
+    expect(window.localStorage.getItem("web-chat-color-mode")).toBe("dark");
+    await user.click(screen.getByRole("button", { name: "More options" }));
+    expect(screen.getByRole("menuitem", { name: /Sign out/ })).toBeInTheDocument();
+    await user.keyboard("{Escape}");
+    expect(screen.queryByRole("menuitem", { name: /Sign out/ })).toBeNull();
     await user.click(
       await screen.findByRole("button", { name: /bob Online/ }),
     );
@@ -341,7 +374,19 @@ describe("chat application", () => {
     expect(
       await screen.findByText("No messages in this conversation yet."),
     ).toBeInTheDocument();
-    expect(within(screen.getByRole("region", { name: "Conversation with bob" })).getByRole("button", { name: "Refresh history" })).toBeEnabled();
+    const conversation = within(
+      screen.getByRole("region", { name: "Conversation with bob" }),
+    );
+    await user.click(
+      conversation.getByRole("button", { name: "Conversation options" }),
+    );
+    expect(
+      screen.getByRole("menuitem", { name: /Refresh history/ }),
+    ).toBeEnabled();
+    await user.click(screen.getByRole("menuitem", { name: /Refresh history/ }));
+    expect(
+      await screen.findByText("No messages in this conversation yet."),
+    ).toBeInTheDocument();
   });
 
   it("returns to login when a protected request reports an expired token", async () => {

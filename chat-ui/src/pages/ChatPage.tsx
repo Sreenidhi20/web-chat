@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Alert, Box, Container } from "@mui/material";
-import AppHeader from "../components/AppHeader.tsx";
+import { Alert, Box, Snackbar } from "@mui/material";
 import ChatWindow from "../components/ChatWindow.tsx";
 import Sidebar from "../components/Sidebar.tsx";
 import { useAuth } from "../context/useAuth.ts";
@@ -50,6 +49,7 @@ function AuthenticatedChatPage({
   const [selectedConversationId, setSelectedConversationId] = useState<
     number | null
   >(null);
+  const [isMobileChatOpen, setIsMobileChatOpen] = useState(false);
   const [isLoadingUsers, setIsLoadingUsers] = useState(true);
   const [usersError, setUsersError] = useState<string | null>(null);
   const [history, setHistory] = useState<{
@@ -276,78 +276,128 @@ function AuthenticatedChatPage({
 
   return (
     <Box
+      className="chat-app-shell"
       sx={{
-        minHeight: "100vh",
+        width: "100%",
+        height: "100dvh",
+        minHeight: 0,
         display: "flex",
         flexDirection: "column",
         bgcolor: "background.default",
+        overflow: "hidden",
       }}
     >
-      <AppHeader username={username} onLogout={onLogout} />
-
-      <Container
+      <Box
         component="main"
-        maxWidth="xl"
+        className="chat-app-frame"
         sx={{
-          flexGrow: 1,
           display: "flex",
           flexDirection: "column",
-          gap: 1.5,
-          py: { xs: 2, sm: 3, md: 5 },
+          flex: "1 1 auto",
+          minHeight: 0,
+          width: "100%",
+          maxWidth: 1600,
+          mx: "auto",
+          bgcolor: "background.paper",
+          overflow: "hidden",
+          "@media (min-width: 1600px)": {
+            height: "calc(100dvh - 48px)",
+            my: 3,
+            borderRadius: 1,
+            boxShadow: (theme) => theme.shadows[4],
+          },
+          "@media (max-width: 899px)": {
+            display: "flex",
+            flexDirection: "column",
+          },
         }}
       >
-        {deliveryInfo && (
-          <Alert severity="info" role="status">
+        <Snackbar
+          open={Boolean(deliveryInfo)}
+          autoHideDuration={6000}
+          onClose={() => setDeliveryInfo(null)}
+          anchorOrigin={{ vertical: "top", horizontal: "center" }}
+        >
+          <Alert
+            severity="info"
+            role="status"
+            onClose={() => setDeliveryInfo(null)}
+            sx={{ width: "100%" }}
+          >
             {deliveryInfo}
           </Alert>
-        )}
+        </Snackbar>
         <Box
+          className="chat-workspace-grid"
           sx={{
             display: "grid",
-            gridTemplateColumns: { xs: "1fr", md: "300px minmax(0, 1fr)" },
-            flexGrow: 1,
-            minHeight: { xs: "70vh", md: "min(700px, calc(100vh - 170px))" },
+            gridTemplateColumns: "minmax(320px, min(34%, 420px)) minmax(0, 1fr)",
+            flex: "1 1 auto",
+            minHeight: 0,
             overflow: "hidden",
             bgcolor: "background.paper",
-            border: 1,
-            borderColor: "divider",
-            borderRadius: 2,
+            "@media (max-width: 899px)": {
+              gridTemplateColumns: "minmax(0, 1fr)",
+              gridTemplateRows: "minmax(0, 1fr)",
+            },
           }}
         >
-          <Sidebar
-            conversations={conversations}
-            selectedConversationId={selectedConversationId}
-            onSelectConversation={(conversation) =>
-              setSelectedConversationId(conversation.id)
-            }
-            isLoading={isLoadingUsers}
-            error={usersError}
-            presenceError={presenceError}
-            onRetry={() => {
-              setUsersError(null);
-              setIsLoadingUsers(true);
-              setRetryUsers((attempt) => attempt + 1);
+          <Box
+            sx={{
+              display: { xs: isMobileChatOpen ? "none" : "flex", md: "flex" },
+              height: "100%",
+              minHeight: 0,
+              minWidth: 0,
             }}
-          />
-          <ChatWindow
-            conversation={selectedConversation}
-            messages={currentHistory?.messages ?? []}
-            currentUserId={userId}
-            isLoading={
-              selectedConversationId !== null && currentHistory === null
-            }
-            error={currentHistory?.error ?? null}
-            socketStatus={socketStatus}
-            socketError={socketError}
-            sendError={sendError}
-            onReconnect={reconnectSocket}
-            onRefreshHistory={refreshHistory}
-            draft={draft}
-            onDraftChange={setDraft}
-            onSend={handleSend}
-          />
+          >
+            <Sidebar
+              username={username}
+              onLogout={onLogout}
+              conversations={conversations}
+              selectedConversationId={selectedConversationId}
+              onSelectConversation={(conversation) => {
+                setSelectedConversationId(conversation.id);
+                setIsMobileChatOpen(true);
+              }}
+              isLoading={isLoadingUsers}
+              error={usersError}
+              presenceError={presenceError}
+              onRetry={() => {
+                setUsersError(null);
+                setIsLoadingUsers(true);
+                setRetryUsers((attempt) => attempt + 1);
+              }}
+            />
+          </Box>
+          <Box
+            sx={{
+              display: { xs: isMobileChatOpen ? "flex" : "none", md: "flex" },
+              height: "100%",
+              minHeight: 0,
+              minWidth: 0,
+            }}
+          >
+            <ChatWindow
+              conversation={selectedConversation}
+              messages={currentHistory?.messages ?? []}
+              currentUserId={userId}
+              isLoading={
+                selectedConversationId !== null && currentHistory === null
+              }
+              error={currentHistory?.error ?? null}
+              socketStatus={socketStatus}
+              socketError={socketError}
+              sendError={sendError}
+              onReconnect={reconnectSocket}
+              onRefreshHistory={refreshHistory}
+              onBack={() => setIsMobileChatOpen(false)}
+              draft={draft}
+              onDraftChange={setDraft}
+              onSend={handleSend}
+            />
+          </Box>
         </Box>
-      </Container>
+      </Box>
     </Box>
   );
 }

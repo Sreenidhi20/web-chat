@@ -1,12 +1,18 @@
-import { Box, Paper, Typography } from "@mui/material";
+import { Box, Paper, Tooltip, Typography } from "@mui/material";
+import ChatIcon from "./ChatIcon.tsx";
 import type { DisplayMessage } from "../types/chat.ts";
 
 interface MessageBubbleProps {
   message: DisplayMessage;
   currentUserId: number;
+  isGroupStart: boolean;
 }
 
-function MessageBubble({ message, currentUserId }: MessageBubbleProps) {
+function MessageBubble({
+  message,
+  currentUserId,
+  isGroupStart,
+}: MessageBubbleProps) {
   const isSent = message.sender_id === currentUserId;
 
   return (
@@ -19,43 +25,68 @@ function MessageBubble({ message, currentUserId }: MessageBubbleProps) {
       <Paper
         elevation={0}
         sx={{
-          maxWidth: "min(75%, 560px)",
-          px: 1.75,
-          py: 1.25,
-          bgcolor: isSent ? "primary.main" : "grey.100",
-          color: isSent ? "primary.contrastText" : "text.primary",
-          borderRadius: 2,
+          maxWidth: "min(78%, 600px)",
+          px: 1.5,
+          py: 0.9,
+          bgcolor: isSent
+            ? (theme) => theme.palette.mode === "dark" ? "#005C4B" : "#D9FDD3"
+            : (theme) => theme.palette.mode === "dark" ? "#202C33" : "#FFFFFF",
+          color: "text.primary",
+          borderRadius: "8px",
+          borderTopRightRadius: isSent && isGroupStart ? 0 : "8px",
+          borderTopLeftRadius: !isSent && isGroupStart ? 0 : "8px",
+          boxShadow: (theme) => theme.shadows[1],
+          overflowWrap: "anywhere",
         }}
       >
-        <Typography sx={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>
+        <Typography sx={{ whiteSpace: "pre-wrap", lineHeight: 1.35 }}>
           {message.content}
         </Typography>
-        <Typography
-          component="time"
-          dateTime={message.sent_at}
-          variant="caption"
+        <Box
           sx={{
-            display: "block",
-            mt: 0.5,
-            textAlign: "right",
-            color: isSent ? "primary.contrastText" : "text.secondary",
-            opacity: 0.8,
+            display: "flex",
+            justifyContent: "flex-end",
+            alignItems: "center",
+            gap: 0.4,
+            mt: 0.25,
+            ml: 2,
           }}
         >
-          {new Date(message.sent_at).toLocaleTimeString([], {
-            hour: "numeric",
-            minute: "2-digit",
-          })}
-        </Typography>
-        {message.isPendingDelivery && (
           <Typography
-            component="span"
+            component="time"
+            dateTime={message.sent_at}
             variant="caption"
-            sx={{ display: "block", textAlign: "right", opacity: 0.8 }}
+            sx={{
+              fontSize: 11,
+              lineHeight: 1.2,
+              color: (theme) =>
+                isSent
+                  ? theme.palette.text.primary
+                  : theme.palette.text.secondary,
+            }}
           >
-            Sent · awaiting history sync
+            {new Date(message.sent_at).toLocaleTimeString([], {
+              hour: "numeric",
+              minute: "2-digit",
+            })}
           </Typography>
-        )}
+          {isSent && (
+            <Tooltip title={message.isPendingDelivery ? "Pending; awaiting history sync" : "Sent"}>
+              <ChatIcon
+                name={message.isPendingDelivery ? "clock" : "check"}
+                titleAccess={
+                  message.isPendingDelivery
+                    ? "Pending; awaiting history sync"
+                    : "Sent"
+                }
+                sx={{
+                  fontSize: 14,
+                  color: "text.primary",
+                }}
+              />
+            </Tooltip>
+          )}
+        </Box>
       </Paper>
     </Box>
   );

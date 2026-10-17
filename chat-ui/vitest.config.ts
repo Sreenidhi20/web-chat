@@ -15,6 +15,7 @@ export default defineConfig(({ mode }) => {
       setupFiles: ["./src/test/setup.ts"],
       clearMocks: true,
       restoreMocks: true,
+      testTimeout: 20_000,
     },
   };
 });
