@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Alert, Box, Container } from "@mui/material";
+import { Alert, Box } from "@mui/material";
 import AppHeader from "../components/AppHeader.tsx";
 import ChatWindow from "../components/ChatWindow.tsx";
 import Sidebar from "../components/Sidebar.tsx";
@@ -276,42 +276,61 @@ function AuthenticatedChatPage({
 
   return (
     <Box
+      className="chat-app-shell"
       sx={{
-        minHeight: "100vh",
+        width: "100%",
+        height: "100dvh",
+        minHeight: 0,
         display: "flex",
         flexDirection: "column",
         bgcolor: "background.default",
+        overflow: "hidden",
       }}
     >
-      <AppHeader username={username} onLogout={onLogout} />
-
-      <Container
+      <Box
         component="main"
-        maxWidth="xl"
+        className="chat-app-frame"
         sx={{
-          flexGrow: 1,
           display: "flex",
           flexDirection: "column",
-          gap: 1.5,
-          py: { xs: 2, sm: 3, md: 5 },
+          flex: "1 1 auto",
+          minHeight: 0,
+          width: "100%",
+          maxWidth: 1600,
+          mx: "auto",
+          bgcolor: "background.paper",
+          overflow: "hidden",
+          "@media (min-width: 1600px)": {
+            height: "calc(100dvh - 48px)",
+            my: 3,
+            borderRadius: 1,
+            boxShadow: (theme) => theme.shadows[4],
+          },
+          "@media (max-width: 899px)": {
+            display: "flex",
+            flexDirection: "column",
+          },
         }}
       >
+        <AppHeader username={username} onLogout={onLogout} />
         {deliveryInfo && (
           <Alert severity="info" role="status">
             {deliveryInfo}
           </Alert>
         )}
         <Box
+          className="chat-workspace-grid"
           sx={{
             display: "grid",
-            gridTemplateColumns: { xs: "1fr", md: "300px minmax(0, 1fr)" },
-            flexGrow: 1,
-            minHeight: { xs: "70vh", md: "min(700px, calc(100vh - 170px))" },
+            gridTemplateColumns: "minmax(320px, 34%) minmax(0, 1fr)",
+            flex: "1 1 auto",
+            minHeight: 0,
             overflow: "hidden",
             bgcolor: "background.paper",
-            border: 1,
-            borderColor: "divider",
-            borderRadius: 2,
+            "@media (max-width: 899px)": {
+              flex: "1 1 auto",
+              gridTemplateColumns: "minmax(0, 1fr)",
+            },
           }}
         >
           <Sidebar
@@ -347,7 +366,7 @@ function AuthenticatedChatPage({
             onSend={handleSend}
           />
         </Box>
-      </Container>
+      </Box>
     </Box>
   );
 }

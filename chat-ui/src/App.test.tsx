@@ -1,5 +1,4 @@
 import { StrictMode } from "react";
-import { CssBaseline, ThemeProvider } from "@mui/material";
 import {
   act,
   render,
@@ -11,7 +10,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import App from "./App.tsx";
 import { AuthProvider } from "./context/AuthContext.tsx";
-import { appTheme } from "./theme.ts";
+import { ColorModeProvider } from "./context/ColorModeContext.tsx";
 import type { ChatMessage } from "./types/chat.ts";
 
 interface OutgoingSocketMessage {
@@ -62,12 +61,11 @@ class TestWebSocket extends EventTarget {
 function renderApp() {
   return render(
     <StrictMode>
-      <ThemeProvider theme={appTheme}>
-        <CssBaseline />
+      <ColorModeProvider>
         <AuthProvider>
           <App />
         </AuthProvider>
-      </ThemeProvider>
+      </ColorModeProvider>
     </StrictMode>,
   );
 }
