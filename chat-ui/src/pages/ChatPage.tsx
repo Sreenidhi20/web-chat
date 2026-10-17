@@ -49,6 +49,7 @@ function AuthenticatedChatPage({
   const [selectedConversationId, setSelectedConversationId] = useState<
     number | null
   >(null);
+  const [isMobileChatOpen, setIsMobileChatOpen] = useState(false);
   const [isLoadingUsers, setIsLoadingUsers] = useState(true);
   const [usersError, setUsersError] = useState<string | null>(null);
   const [history, setHistory] = useState<{
@@ -336,45 +337,65 @@ function AuthenticatedChatPage({
             overflow: "hidden",
             bgcolor: "background.paper",
             "@media (max-width: 899px)": {
-              flex: "1 1 auto",
               gridTemplateColumns: "minmax(0, 1fr)",
+              gridTemplateRows: "minmax(0, 1fr)",
             },
           }}
         >
-          <Sidebar
-            username={username}
-            onLogout={onLogout}
-            conversations={conversations}
-            selectedConversationId={selectedConversationId}
-            onSelectConversation={(conversation) =>
-              setSelectedConversationId(conversation.id)
-            }
-            isLoading={isLoadingUsers}
-            error={usersError}
-            presenceError={presenceError}
-            onRetry={() => {
-              setUsersError(null);
-              setIsLoadingUsers(true);
-              setRetryUsers((attempt) => attempt + 1);
+          <Box
+            sx={{
+              display: { xs: isMobileChatOpen ? "none" : "flex", md: "flex" },
+              height: "100%",
+              minHeight: 0,
+              minWidth: 0,
             }}
-          />
-          <ChatWindow
-            conversation={selectedConversation}
-            messages={currentHistory?.messages ?? []}
-            currentUserId={userId}
-            isLoading={
-              selectedConversationId !== null && currentHistory === null
-            }
-            error={currentHistory?.error ?? null}
-            socketStatus={socketStatus}
-            socketError={socketError}
-            sendError={sendError}
-            onReconnect={reconnectSocket}
-            onRefreshHistory={refreshHistory}
-            draft={draft}
-            onDraftChange={setDraft}
-            onSend={handleSend}
-          />
+          >
+            <Sidebar
+              username={username}
+              onLogout={onLogout}
+              conversations={conversations}
+              selectedConversationId={selectedConversationId}
+              onSelectConversation={(conversation) => {
+                setSelectedConversationId(conversation.id);
+                setIsMobileChatOpen(true);
+              }}
+              isLoading={isLoadingUsers}
+              error={usersError}
+              presenceError={presenceError}
+              onRetry={() => {
+                setUsersError(null);
+                setIsLoadingUsers(true);
+                setRetryUsers((attempt) => attempt + 1);
+              }}
+            />
+          </Box>
+          <Box
+            sx={{
+              display: { xs: isMobileChatOpen ? "flex" : "none", md: "flex" },
+              height: "100%",
+              minHeight: 0,
+              minWidth: 0,
+            }}
+          >
+            <ChatWindow
+              conversation={selectedConversation}
+              messages={currentHistory?.messages ?? []}
+              currentUserId={userId}
+              isLoading={
+                selectedConversationId !== null && currentHistory === null
+              }
+              error={currentHistory?.error ?? null}
+              socketStatus={socketStatus}
+              socketError={socketError}
+              sendError={sendError}
+              onReconnect={reconnectSocket}
+              onRefreshHistory={refreshHistory}
+              onBack={() => setIsMobileChatOpen(false)}
+              draft={draft}
+              onDraftChange={setDraft}
+              onSend={handleSend}
+            />
+          </Box>
         </Box>
       </Box>
     </Box>
