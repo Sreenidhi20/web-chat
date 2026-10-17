@@ -1,5 +1,6 @@
 import { IconButton, Paper, TextField } from "@mui/material";
-import type { FormEvent } from "react";
+import type { FormEvent, KeyboardEvent } from "react";
+import ChatIcon from "./ChatIcon.tsx";
 
 interface MessageInputProps {
   disabled: boolean;
@@ -25,6 +26,19 @@ function MessageInput({
     }
   }
 
+  function handleKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
+    if (
+      event.key === "Enter" &&
+      !event.shiftKey &&
+      !event.nativeEvent.isComposing
+    ) {
+      event.preventDefault();
+      if (canSend) {
+        onSend();
+      }
+    }
+  }
+
   return (
     <Paper
       component="form"
@@ -34,37 +48,58 @@ function MessageInput({
       sx={{
         display: "flex",
         alignItems: "center",
-        gap: 1,
-        p: 1,
+        gap: 0.75,
+        px: 1.25,
+        py: 0.75,
         border: 1,
         borderColor: "divider",
-        borderRadius: 3,
+        borderRadius: 4,
+        bgcolor: "background.paper",
       }}
     >
       <TextField
         fullWidth
+        multiline
+        minRows={1}
+        maxRows={6}
         disabled={disabled}
         placeholder={placeholder}
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        slotProps={{ htmlInput: { "aria-label": "Message" } }}
+        slotProps={{
+          htmlInput: {
+            "aria-label": "Message",
+            style: { lineHeight: 1.4, padding: "8px 0" },
+            onKeyDown: handleKeyDown,
+          },
+        }}
         variant="standard"
+        sx={{
+          "& .MuiInput-root::before, & .MuiInput-root::after": { display: "none" },
+          "& textarea": { resize: "none" },
+        }}
       />
       <IconButton
         type="submit"
-        color="primary"
         aria-label="Send message"
         disabled={!canSend || value.trim().length === 0}
+        sx={{
+          flex: "0 0 auto",
+          width: 42,
+          height: 42,
+          color: value.trim() ? "#FFFFFF" : "text.secondary",
+          bgcolor: value.trim() ? "success.main" : "transparent",
+          transition: "background-color 140ms ease, color 140ms ease",
+          "&:hover": {
+            bgcolor: value.trim() ? "success.dark" : "action.hover",
+          },
+          "&.Mui-disabled": {
+            color: "action.disabled",
+            bgcolor: "transparent",
+          },
+        }}
       >
-        <svg
-          aria-hidden="true"
-          viewBox="0 0 24 24"
-          width="24"
-          height="24"
-          fill="currentColor"
-        >
-          <path d="M2.01 21 23 12 2.01 3 2 10l15 2-15 2z" />
-        </svg>
+        <ChatIcon name="send" />
       </IconButton>
     </Paper>
   );
