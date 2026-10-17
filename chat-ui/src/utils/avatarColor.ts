@@ -25,7 +25,7 @@ const darkColors = [
 export function avatarColor(username: string, mode: ColorMode = "light"): string {
   let hash = 5381;
   for (const character of username.toLowerCase()) {
-    hash = Math.imul(hash, 33) ^ character.codePointAt(0)!;
+    hash = Math.imul(hash, 33) ^ (character.codePointAt(0) ?? 0);
   }
 
   const palette = mode === "dark" ? darkColors : lightColors;

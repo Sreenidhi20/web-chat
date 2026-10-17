@@ -77,6 +77,7 @@ describe("chat application", () => {
   beforeEach(() => {
     serverHistory = [];
     requests = [];
+    window.localStorage.clear();
     TestWebSocket.instances = [];
     vi.stubGlobal("WebSocket", TestWebSocket);
     vi.stubGlobal(
@@ -153,6 +154,13 @@ describe("chat application", () => {
       screen.getByLabelText(/Password/),
       "wrong-password",
     );
+    await user.click(screen.getByRole("button", { name: "Show password" }));
+    expect(screen.getByLabelText(/Password/)).toHaveAttribute("type", "text");
+    await user.click(screen.getByRole("button", { name: "Hide password" }));
+    expect(screen.getByLabelText(/Password/)).toHaveAttribute(
+      "type",
+      "password",
+    );
     await user.click(screen.getByRole("button", { name: "Sign in" }));
     expect(await screen.findByRole("alert")).toHaveTextContent(
       "Invalid username or password",
@@ -220,6 +228,10 @@ describe("chat application", () => {
     );
 
     const composer = screen.getByRole("textbox", { name: "Message" });
+    await user.type(composer, "draft line");
+    await user.keyboard("{Shift>}{Enter}{/Shift}");
+    expect(composer).toHaveValue("draft line\n");
+    await user.clear(composer);
     await user.type(composer, "hello Bob");
     await user.keyboard("{Enter}");
 
@@ -331,6 +343,23 @@ describe("chat application", () => {
       "correct-password",
     );
     await user.click(screen.getByRole("button", { name: "Sign in" }));
+    const search = await screen.findByRole("textbox", {
+      name: "Search contacts",
+    });
+    await user.type(search, "not-a-contact");
+    expect(
+      await screen.findByText("No contacts match your search."),
+    ).toBeInTheDocument();
+    await user.clear(search);
+    expect(
+      await screen.findByRole("button", { name: /bob Online/ }),
+    ).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Switch to dark mode" }));
+    expect(window.localStorage.getItem("web-chat-color-mode")).toBe("dark");
+    await user.click(screen.getByRole("button", { name: "More options" }));
+    expect(screen.getByRole("menuitem", { name: /Sign out/ })).toBeInTheDocument();
+    await user.keyboard("{Escape}");
+    expect(screen.queryByRole("menuitem", { name: /Sign out/ })).toBeNull();
     await user.click(
       await screen.findByRole("button", { name: /bob Online/ }),
     );
@@ -354,6 +383,10 @@ describe("chat application", () => {
     expect(
       screen.getByRole("menuitem", { name: /Refresh history/ }),
     ).toBeEnabled();
+    await user.click(screen.getByRole("menuitem", { name: /Refresh history/ }));
+    expect(
+      await screen.findByText("No messages in this conversation yet."),
+    ).toBeInTheDocument();
   });
 
   it("returns to login when a protected request reports an expired token", async () => {

@@ -88,10 +88,16 @@ function MessageInput({
           width: 42,
           height: 42,
           color: value.trim() ? "#FFFFFF" : "text.secondary",
-          bgcolor: value.trim() ? "success.main" : "transparent",
+          bgcolor: value.trim()
+            ? (theme) =>
+                theme.palette.mode === "dark" ? "#00745F" : "success.main"
+            : "transparent",
           transition: "background-color 140ms ease, color 140ms ease",
           "&:hover": {
-            bgcolor: value.trim() ? "success.dark" : "action.hover",
+            bgcolor: value.trim()
+              ? (theme) =>
+                  theme.palette.mode === "dark" ? "#006052" : "success.dark"
+              : "action.hover",
           },
           "&.Mui-disabled": {
             color: "action.disabled",

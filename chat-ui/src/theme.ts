@@ -9,14 +9,14 @@ export function createAppTheme(mode: ColorMode) {
     palette: {
       mode,
       primary: { main: dark ? "#00A884" : "#008069", contrastText: "#FFFFFF" },
-      success: { main: dark ? "#25D366" : "#128C7E" },
+      success: { main: dark ? "#25D366" : "#00745F" },
       background: {
         default: dark ? "#0B141A" : "#F0F2F5",
         paper: dark ? "#111B21" : "#FFFFFF",
       },
       text: {
         primary: dark ? "#E9EDEF" : "#111B21",
-        secondary: dark ? "#8696A0" : "#667781",
+        secondary: dark ? "#8696A0" : "#5C6B73",
       },
       divider: dark ? "#222D34" : "#E9EDEF",
     },

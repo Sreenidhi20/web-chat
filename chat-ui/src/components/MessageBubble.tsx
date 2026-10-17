@@ -56,8 +56,14 @@ function MessageBubble({
             component="time"
             dateTime={message.sent_at}
             variant="caption"
-            color="text.secondary"
-            sx={{ fontSize: 11, lineHeight: 1.2 }}
+            sx={{
+              fontSize: 11,
+              lineHeight: 1.2,
+              color: (theme) =>
+                isSent
+                  ? theme.palette.text.primary
+                  : theme.palette.text.secondary,
+            }}
           >
             {new Date(message.sent_at).toLocaleTimeString([], {
               hour: "numeric",
@@ -75,7 +81,7 @@ function MessageBubble({
                 }
                 sx={{
                   fontSize: 14,
-                  color: "text.secondary",
+                  color: "text.primary",
                 }}
               />
             </Tooltip>

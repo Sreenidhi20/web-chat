@@ -331,7 +331,7 @@ function AuthenticatedChatPage({
           className="chat-workspace-grid"
           sx={{
             display: "grid",
-            gridTemplateColumns: "minmax(320px, 34%) minmax(0, 1fr)",
+            gridTemplateColumns: "minmax(320px, min(34%, 420px)) minmax(0, 1fr)",
             flex: "1 1 auto",
             minHeight: 0,
             overflow: "hidden",
