@@ -225,7 +225,9 @@ describe("chat application", () => {
 
     expect(await screen.findByText("hello Bob")).toBeInTheDocument();
     expect(socket!.sentMessages).toEqual([{ to: 2, message: "hello Bob" }]);
-    expect(await screen.findByText(/awaiting history sync/)).toBeInTheDocument();
+    expect(
+      await screen.findByRole("img", { name: /awaiting history sync/ }),
+    ).toBeInTheDocument();
 
     const optimisticTimestamp = container
       .querySelector("time")
@@ -250,7 +252,9 @@ describe("chat application", () => {
       await screen.findByRole("status"),
     ).toHaveTextContent("The message is saved, but was not delivered live.");
     await waitFor(() => {
-      expect(screen.queryByText(/awaiting history sync/)).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole("img", { name: /awaiting history sync/ }),
+      ).not.toBeInTheDocument();
     });
     expect(screen.getAllByText("hello Bob")).toHaveLength(1);
 

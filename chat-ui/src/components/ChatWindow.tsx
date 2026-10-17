@@ -17,9 +17,12 @@ import MessageBubble from "./MessageBubble.tsx";
 import MessageInput from "./MessageInput.tsx";
 import EmptyChatState from "./EmptyChatState.tsx";
 import ChatIcon from "./ChatIcon.tsx";
+import DateDivider from "./DateDivider.tsx";
 import { useColorMode } from "../context/colorMode.ts";
+import { useAutoScroll } from "../hooks/useAutoScroll.ts";
 import { avatarColor } from "../utils/avatarColor.ts";
 import type { Conversation, DisplayMessage } from "../types/chat.ts";
+import { groupMessages } from "../utils/groupMessages.ts";
 import { useState } from "react";
 
 interface ChatWindowProps {
@@ -57,6 +60,13 @@ function ChatWindow({
 }: ChatWindowProps) {
   const { mode } = useColorMode();
   const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null);
+  const messageItems = groupMessages(messages);
+  const {
+    containerRef,
+    handleScroll,
+    scrollToLatest,
+    showScrollButton,
+  } = useAutoScroll(conversation?.id ?? null, messages.length);
   const chatBackground = mode === "dark" ? "#0B141A" : "#EFEAE2";
   const patternColor =
     mode === "dark" ? "rgba(233,237,239,0.025)" : "rgba(17,27,33,0.045)";
@@ -190,49 +200,81 @@ function ChatWindow({
             )}
           </Stack>
         )}
-      <Stack
-        component="div"
-        role="log"
-        aria-live="polite"
-        aria-relevant="additions text"
-        spacing={1.5}
-        sx={{
-          flex: "1 1 auto",
-          minHeight: 0,
-          overflowY: "auto",
-          p: { xs: 1.5, sm: 3 },
-          scrollbarGutter: "stable",
-        }}
-      >
-        {error ? (
-          <Stack role="alert" spacing={1} sx={{ m: "auto", textAlign: "center", px: 2 }}>
-            <Typography color="error.main">{error}</Typography>
-            <Button onClick={onRefreshHistory} size="small">
-              Retry loading history
-            </Button>
-          </Stack>
-        ) : isLoading ? (
-          <Stack role="status" aria-label="Loading messages" spacing={1} sx={{ mt: "auto" }}>
-            <Skeleton variant="rounded" width="42%" height={42} sx={{ borderRadius: 2 }} />
-            <Skeleton variant="rounded" width="56%" height={54} sx={{ alignSelf: "flex-end", borderRadius: 2 }} />
-            <Skeleton variant="rounded" width="34%" height={42} sx={{ borderRadius: 2 }} />
-          </Stack>
-        ) : conversation && currentUserId !== null && messages.length > 0 ? (
-          messages.map((message) => (
-            <MessageBubble
-              key={message.id}
-              message={message}
-              currentUserId={currentUserId}
-            />
-          ))
-        ) : conversation ? (
-          <Typography color="text.secondary" sx={{ m: "auto", textAlign: "center" }}>
-            No messages in this conversation yet.
-          </Typography>
-        ) : (
-          <EmptyChatState />
+      <Box sx={{ position: "relative", flex: "1 1 auto", minHeight: 0 }}>
+        <Stack
+          ref={containerRef}
+          onScroll={handleScroll}
+          component="div"
+          role="log"
+          aria-live="polite"
+          aria-relevant="additions text"
+          spacing={0}
+          sx={{
+            height: "100%",
+            minHeight: 0,
+            overflowY: "auto",
+            p: { xs: 1.5, sm: 3 },
+            scrollbarGutter: "stable",
+          }}
+        >
+          {error ? (
+            <Stack role="alert" spacing={1} sx={{ m: "auto", textAlign: "center", px: 2 }}>
+              <Typography color="error.main">{error}</Typography>
+              <Button onClick={onRefreshHistory} size="small">
+                Retry loading history
+              </Button>
+            </Stack>
+          ) : isLoading ? (
+            <Stack role="status" aria-label="Loading messages" spacing={1} sx={{ mt: "auto" }}>
+              <Skeleton variant="rounded" width="42%" height={42} sx={{ borderRadius: 2 }} />
+              <Skeleton variant="rounded" width="56%" height={54} sx={{ alignSelf: "flex-end", borderRadius: 2 }} />
+              <Skeleton variant="rounded" width="34%" height={42} sx={{ borderRadius: 2 }} />
+            </Stack>
+          ) : conversation && currentUserId !== null && messages.length > 0 ? (
+            messageItems.map((item) =>
+              item.type === "date" ? (
+                <DateDivider key={item.key} label={item.label} />
+              ) : (
+                <Stack key={item.key} spacing={0.25} sx={{ mt: 1 }}>
+                  {item.messages.map((message, index) => (
+                    <MessageBubble
+                      key={message.id}
+                      message={message}
+                      currentUserId={currentUserId}
+                      isGroupStart={index === 0}
+                    />
+                  ))}
+                </Stack>
+              ),
+            )
+          ) : conversation ? (
+            <Typography color="text.secondary" sx={{ m: "auto", textAlign: "center" }}>
+              No messages in this conversation yet.
+            </Typography>
+          ) : (
+            <EmptyChatState />
+          )}
+        </Stack>
+        {showScrollButton && (
+          <Tooltip title="Scroll to latest">
+            <IconButton
+              aria-label="Scroll to latest"
+              onClick={scrollToLatest}
+              sx={{
+                position: "absolute",
+                right: { xs: 14, sm: 24 },
+                bottom: 16,
+                bgcolor: "background.paper",
+                color: "primary.main",
+                boxShadow: (theme) => theme.shadows[3],
+                "&:hover": { bgcolor: "background.paper" },
+              }}
+            >
+              <ChatIcon name="arrowDown" />
+            </IconButton>
+          </Tooltip>
         )}
-      </Stack>
+      </Box>
       {conversation && (
         <Box sx={{ p: { xs: 1, sm: 1.5 }, pt: 0 }}>
           <MessageInput
