@@ -210,8 +210,8 @@ describe("chat application", () => {
       await screen.findByText("No messages in this conversation yet."),
     ).toBeInTheDocument();
     expect(
-      await screen.findByText("Real-time connection is active."),
-    ).toBeInTheDocument();
+      screen.queryByText("Real-time connection is active."),
+    ).not.toBeInTheDocument();
 
     const socket = TestWebSocket.instances.at(-1);
     expect(socket).toBeDefined();
@@ -279,9 +279,10 @@ describe("chat application", () => {
     expect(screen.getByRole("button", { name: "Send message" })).toBeDisabled();
     expect(socket!.sentMessages).toHaveLength(1);
     await user.click(screen.getByRole("button", { name: "Reconnect" }));
-    expect(
-      await screen.findByText("Real-time connection is active."),
-    ).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "Send message" })).toBeEnabled();
+    });
+    expect(screen.queryByText("Real-time connection is active.")).not.toBeInTheDocument();
     expect(
       TestWebSocket.instances.flatMap((instance) => instance.sentMessages),
     ).toEqual([{ to: 2, message: "hello Bob" }]);
@@ -340,7 +341,15 @@ describe("chat application", () => {
     expect(
       await screen.findByText("No messages in this conversation yet."),
     ).toBeInTheDocument();
-    expect(within(screen.getByRole("region", { name: "Conversation with bob" })).getByRole("button", { name: "Refresh history" })).toBeEnabled();
+    const conversation = within(
+      screen.getByRole("region", { name: "Conversation with bob" }),
+    );
+    await user.click(
+      conversation.getByRole("button", { name: "Conversation options" }),
+    );
+    expect(
+      screen.getByRole("menuitem", { name: /Refresh history/ }),
+    ).toBeEnabled();
   });
 
   it("returns to login when a protected request reports an expired token", async () => {

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Alert, Box } from "@mui/material";
+import { Alert, Box, Snackbar } from "@mui/material";
 import ChatWindow from "../components/ChatWindow.tsx";
 import Sidebar from "../components/Sidebar.tsx";
 import { useAuth } from "../context/useAuth.ts";
@@ -311,11 +311,21 @@ function AuthenticatedChatPage({
           },
         }}
       >
-        {deliveryInfo && (
-          <Alert severity="info" role="status">
+        <Snackbar
+          open={Boolean(deliveryInfo)}
+          autoHideDuration={6000}
+          onClose={() => setDeliveryInfo(null)}
+          anchorOrigin={{ vertical: "top", horizontal: "center" }}
+        >
+          <Alert
+            severity="info"
+            role="status"
+            onClose={() => setDeliveryInfo(null)}
+            sx={{ width: "100%" }}
+          >
             {deliveryInfo}
           </Alert>
-        )}
+        </Snackbar>
         <Box
           className="chat-workspace-grid"
           sx={{
